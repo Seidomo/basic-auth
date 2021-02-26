@@ -1,31 +1,38 @@
 'use strict';
 
+// ///////dependencies?
 const express = require('express');
+const Users = require('../models/user-model.js');
+const basicAuth = require('../middleware/basic.js');
+
 const router = express.Router();
-const bcrypt = require('bcrypt');
-const base64 = require('base-64');
+
+//////how has basicAuth changes our request?
+
+router.post('/signup', createSignup);
+// signin
+router.post('/signin', basicAuth, createSignin);
 
 
-  
-  
-  // create a new User, with a username / password.  The password should always be encrypted before saving.
-  router.post('/signup', async (req, res) => {
-  
-    let username = req.body.username;
-    let password = req.body.password;
-  
-    // encrupt immediately
-    let encryptedPassword = await bcrypt.hash(password, 5);
-    // create our user
-    const newUser = new UserModel({ username: username, password: encryptedPassword });
-    const document = await newUser.save();
-  
-    // send user to the client.
-    res.status(201).json(document);
-  });
-    
-  router.post('/signin', async (req, res, next) => {
+async function createSignup(req, res) {
 
-    res.send('blabla')
-  });
-  module.exports = router;
+  try {
+    const user = new Users(req.body);
+    const record = await user.save(req.body);
+    res.status(201).json(record);
+  } catch (e) { res.status(403).send("Error Creating User"); }
+
+}
+
+function createSignin(req, res, next) {
+
+  console.log(req.user); // {username: password}
+
+  res.status(200).json({ user: req.user });
+}
+
+
+
+
+
+module.exports = router;

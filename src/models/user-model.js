@@ -1,31 +1,40 @@
 'use strict';
 
-
+const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 
-const mongoose = require('mongoose');
+const usersSchema = mongoose.Schema({
+  username: { type: String, required: true },
+  password: { type: String, required: true },
+});
 
 
-const userSchema = mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // this should always be encrypted
-  });
+// automatically hashes the password whenever we 'save'  a new password
+usersSchema.pre('save', async function () {
+  // this will refer to the instance being made
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 5);
+  }
+});
 
-  const User = mongoose.model('users', userSchema);
-  
-  userSchema.pre('save', async function () {
-    // this will refer to the instance being made
-    console.log(this);
-  });
-  
-  userSchema.statics.example = async function (request, response) {
-    try{
-    request.body.password = await bcrypt.hash(password, 5);
-    const user = new User(request.body);
-    const document = await user.save(request.body);
-    res.status(201).json(document);
-   }
-   .catch(error){res.status(404).send('No Username Found!')}
+// Static methods belong to the constructor, not the instance that the constructor creates
+usersSchema.statics.authenticateBasic = async function (username, password) {
+
+  const user = await this.findOne({ username: username });
+  const valid = await bcrypt.compare(password, user.password);
+
+  if (valid) {
+    return user;
+  } else {
+    throw new Error('User Validation Error');
   }
 
-  module.exports = User;
+}
+
+usersSchema.validate = function () {
+
+}
+
+const Users = mongoose.model('users', usersSchema);
+
+module.exports = Users;
